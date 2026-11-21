@@ -315,7 +315,7 @@ export function CakeScene() {
   return (
     <ErrorBoundary>
       <Canvas
-        dpr={[1, 2]}
+        dpr={[1, lowPower ? 1 : 1.5]}
         camera={{ position: [0, 1.2, 4.5], fov: 50 }}
         shadows
         gl={{ antialias: !lowPower, alpha: true }}

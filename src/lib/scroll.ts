@@ -6,18 +6,24 @@ gsap.registerPlugin(ScrollTrigger);
 
 let lenis: Lenis | null = null;
 
+const isMobileDevice = () =>
+  /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+  window.innerWidth < 768;
+
 export function initScroll(): Lenis {
+  const mobile = isMobileDevice();
+
   lenis = new Lenis({
-    duration: 1.4,
+    // Shorter duration on mobile so scroll feels snappy, not sluggish
+    duration: mobile ? 0.8 : 1.3,
     easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     orientation: "vertical",
-    smoothWheel: true,
+    smoothWheel: !mobile, // native scroll on mobile is faster
   });
 
   // Wire Lenis into GSAP ticker
-  gsap.ticker.add((time: number) => {
-    lenis?.raf(time * 1000);
-  });
+  const ticker = (time: number) => { lenis?.raf(time * 1000); };
+  gsap.ticker.add(ticker);
   gsap.ticker.lagSmoothing(0);
 
   // Sync ScrollTrigger with Lenis

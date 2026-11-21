@@ -56,19 +56,26 @@ function BakerPhoto() {
   const ref     = useRef<HTMLDivElement>(null);
   const inView  = useInView(ref, { once: true, margin: "-10% 0px" });
   const reduced = useReducedMotion();
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
 
-  // Mouse-tilt state
+  // Mouse-tilt state — desktop only
   const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
 
   useEffect(() => {
-    if (reduced) return;
+    const ro = new ResizeObserver(() => setIsMobile(window.innerWidth < 768));
+    ro.observe(document.body);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (reduced || isMobile) return;
     const onMove = (e: MouseEvent) => {
       if (!ref.current) return;
       const rect = ref.current.getBoundingClientRect();
       const cx   = rect.left + rect.width / 2;
       const cy   = rect.top  + rect.height / 2;
-      const rx   = ((e.clientY - cy) / rect.height) * -10;
-      const ry   = ((e.clientX - cx) / rect.width)  *  10;
+      const rx   = ((e.clientY - cy) / rect.height) * -8;
+      const ry   = ((e.clientX - cx) / rect.width)  *  8;
       setTilt({ rx, ry });
     };
     const onLeave = () => setTilt({ rx: 0, ry: 0 });
@@ -78,14 +85,13 @@ function BakerPhoto() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseleave", onLeave);
     };
-  }, [reduced]);
+  }, [reduced, isMobile]);
 
-  // Scroll parallax for the frame
+  // Scroll parallax for the frame — desktop only
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const parallaxY = useTransform(scrollYProgress, [0, 1], reduced ? [0, 0] : [-20, 20]);
+  const parallaxY = useTransform(scrollYProgress, [0, 1], reduced || isMobile ? [0, 0] : [-20, 20]);
 
-  // Gold dust particles (CSS only — no canvas, mobile-friendly)
-  const particles = Array.from({ length: 12 }, (_, i) => ({
+  const particles = Array.from({ length: isMobile ? 6 : 12 }, (_, i) => ({
     id: i,
     left:  `${10 + (i * 7.3) % 80}%`,
     top:   `${5 + (i * 11.7) % 90}%`,
@@ -94,16 +100,35 @@ function BakerPhoto() {
     color: i % 3 === 0 ? "var(--rose)" : "var(--gold)",
   }));
 
+  // On mobile: no 3D transform at all — just a clean framed image
+  const frameStyle: React.CSSProperties = isMobile ? {
+    position: "relative",
+    borderRadius: "16px",
+    padding: "5px",
+    background: "linear-gradient(145deg, rgba(232,201,135,0.4), rgba(232,201,135,0.1), rgba(242,184,198,0.2))",
+    boxShadow: "0 12px 40px rgba(0,0,0,0.5), 0 0 30px rgba(232,201,135,0.08)",
+  } : {
+    position: "relative",
+    borderRadius: "16px",
+    padding: "6px",
+    background: "linear-gradient(145deg, rgba(232,201,135,0.4), rgba(232,201,135,0.1), rgba(242,184,198,0.2))",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(232,201,135,0.1)",
+    transform: (reduced || isMobile)
+      ? "none"
+      : `perspective(800px) rotateX(${tilt.rx}deg) rotateY(${tilt.ry}deg)`,
+    transition: "transform 0.15s ease-out",
+  };
+
   return (
     <motion.div
       ref={ref}
-      style={{ y: parallaxY, position: "relative" }}
-      initial={{ opacity: 0, x: -30 }}
-      animate={inView ? { opacity: 1, x: 0 } : {}}
-      transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+      style={{ y: parallaxY, position: "relative", width: "100%" }}
+      initial={{ opacity: 0, y: isMobile ? 20 : 0, x: isMobile ? 0 : -30 }}
+      animate={inView ? { opacity: 1, y: 0, x: 0 } : {}}
+      transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
     >
-      {/* Floating particles */}
-      {particles.map((p) => (
+      {/* Floating particles — behind frame */}
+      {!isMobile && particles.map((p) => (
         <div
           key={p.id}
           aria-hidden="true"
@@ -115,32 +140,17 @@ function BakerPhoto() {
             background: p.color,
             opacity: 0.4,
             pointerEvents: "none",
-            zIndex: 10,
+            zIndex: 0,
             animation: reduced ? "none" : `floatDust ${3 + (p.id % 3)}s ease-in-out ${p.delay}s infinite alternate`,
           }}
         />
       ))}
 
       {/* Frame */}
-      <motion.div
-        animate={reduced ? {} : {
-          rotateX: tilt.rx,
-          rotateY: tilt.ry,
-        }}
-        transition={{ type: "spring", stiffness: 180, damping: 28 }}
-        style={{
-          transformStyle: "preserve-3d",
-          perspective: "800px",
-          position: "relative",
-          borderRadius: "16px",
-          padding: "6px",
-          background: "linear-gradient(145deg, rgba(232,201,135,0.4), rgba(232,201,135,0.1), rgba(242,184,198,0.2))",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(232,201,135,0.1)",
-        }}
-      >
+      <div style={frameStyle}>
         {/* Inner gold border */}
         <div style={{
-          position: "absolute", inset: "6px",
+          position: "absolute", inset: "5px",
           border: "1px solid rgba(232,201,135,0.3)",
           borderRadius: "12px",
           pointerEvents: "none",
@@ -151,7 +161,8 @@ function BakerPhoto() {
         <div style={{
           borderRadius: "12px",
           overflow: "hidden",
-          width: "clamp(240px, 38vw, 420px)",
+          width: "100%",
+          maxWidth: isMobile ? "100%" : "clamp(240px, 38vw, 420px)",
         }}>
           <CinematicImage
             src={photo.src}
@@ -159,30 +170,24 @@ function BakerPhoto() {
             srcFallback={photo.srcFallback}
             alt={photo.alt}
             focalPoint={photo.focalPoint}
-            aspectRatio={photo.orientation === "portrait" ? "3/4" : "4/3"}
+            aspectRatio="4/5"
             eager={false}
           />
         </div>
 
-        {/* Soft glow overlay */}
+        {/* Soft glow */}
         <div aria-hidden="true" style={{
           position: "absolute", inset: 0, borderRadius: "12px",
           background: "radial-gradient(ellipse at 30% 20%, rgba(232,201,135,0.08) 0%, transparent 60%)",
           pointerEvents: "none",
         }} />
-      </motion.div>
+      </div>
 
-      {/* Caption under photo */}
+      {/* Caption */}
       <p style={{
-        fontFamily: "var(--font-display)",
-        fontStyle: "italic",
-        fontWeight: 300,
-        fontSize: "clamp(0.78rem, 1.8vw, 0.9rem)",
-        color: "var(--ivory)",
-        opacity: 0.5,
-        textAlign: "center",
-        marginTop: "0.75rem",
-        letterSpacing: "0.04em",
+        fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300,
+        fontSize: "clamp(0.78rem, 1.8vw, 0.9rem)", color: "var(--ivory)",
+        opacity: 0.5, textAlign: "center", marginTop: "0.75rem", letterSpacing: "0.04em",
       }}>
         {photo.caption}
       </p>
