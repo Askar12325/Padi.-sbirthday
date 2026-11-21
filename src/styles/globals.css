@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+/* ── CSS Custom Properties ── */
+:root {
+  --bg-from: #0b0814;
+  --bg-to: #1a1030;
+  --gold: #e8c987;
+  --rose: #f2b8c6;
+  --ivory: #fbf4e9;
+  --font-display: "Fraunces", "Cormorant Garamond", Georgia, serif;
+  --font-body: "Manrope", system-ui, sans-serif;
+  --font-hand: "Caveat", cursive;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --transition-slow: 1.2s var(--ease-out-expo);
+  --transition-med: 0.7s var(--ease-out-quart);
+  /* Safe-area helpers */
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: auto; /* Lenis handles smooth scroll */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Prevent iOS rubber-band overscroll from showing white */
+  background: #0b0814;
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg-from);
+  color: var(--ivory);
+  font-family: var(--font-body);
+  font-size: clamp(1rem, 2.5vw, 1.125rem);
+  line-height: 1.65;
+  overflow-x: hidden;
+  /* Prevent mobile scroll snap conflicts */
+  overscroll-behavior-y: none;
+}
+
+/* Film grain — cheap SVG noise, avoid heavy canvas on mobile */
+@media (prefers-reduced-motion: no-preference) and (min-width: 768px) {
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 9998;
+    animation: grain 0.5s steps(1) infinite;
+  }
+}
+
+@keyframes grain {
+  0%  { transform: translate(0, 0); }
+  10% { transform: translate(-2%, -3%); }
+  20% { transform: translate(2%, 1%); }
+  30% { transform: translate(-1%, 3%); }
+  40% { transform: translate(3%, -1%); }
+  50% { transform: translate(-3%, 2%); }
+  60% { transform: translate(1%, -2%); }
+  70% { transform: translate(-2%, 3%); }
+  80% { transform: translate(2%, -3%); }
+  90% { transform: translate(-1%, 1%); }
+  100%{ transform: translate(1%, 2%); }
+}
+
+/* Vignette on sections */
+.vignette::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(11, 8, 20, 0.65) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Typography ── */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+}
+
+h1 { font-size: clamp(2.2rem, 6.5vw, 5.5rem); }
+h2 { font-size: clamp(1.6rem, 4vw, 3.2rem); }
+h3 { font-size: clamp(1.2rem, 2.8vw, 2rem); }
+
+/* ── Focus states ── */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Remove focus ring for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(232,201,135,0.3); border-radius: 2px; }
+* { scrollbar-width: thin; scrollbar-color: rgba(232,201,135,0.3) transparent; }
+
+/* ── Utility ── */
+.full-screen {
+  min-height: 100dvh;
+  padding-bottom: var(--sab);
+  width: 100%;
+  position: relative;
+}
+
+.glass-card {
+  background: rgba(251, 244, 233, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(232, 201, 135, 0.18);
+  border-radius: 16px;
+}
+
+.gold-border {
+  border: 1px solid rgba(232, 201, 135, 0.3);
+}
+
+/* Hide scrollbar visually on carousels */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  body::after { animation: none; }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Mobile landscape fix ── */
+@media (max-height: 480px) and (orientation: landscape) {
+  .full-screen {
+    min-height: 100svh;
+  }
+}
+
+/* ── Prevent text selection on interactive elements ── */
+button, [role="button"], [role="tab"] {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
